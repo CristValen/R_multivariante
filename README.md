@@ -1,5 +1,5 @@
-# git_multivariante
- Estadistica multivariante
+# ESTAISTICA MULTIVARIANTE 
+
 
 En la primera parte de analisis se estudiaran la tasa de enfermedades transmitidas por los alimentos causadas por
 el consumo de hortalizas y frutas en la Unión Europea y Estados Unidos con los datos del trabajo de
