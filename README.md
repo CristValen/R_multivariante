@@ -1,4 +1,4 @@
-# ESTADISTICA MULTIVARIANTE 
+# ESTADISTICA MULTIVARIANTE CON R
 
 
 En la primera parte de analisis se estudiaran la tasa de enfermedades transmitidas por los alimentos causadas por
