@@ -19,3 +19,9 @@ Se observaron las relaciones de proximidad cada 60 segundos. Si dos monos se enc
 cada par de monos en función del tiempo que la pareja estuvo cerca la una de la otra. Las disimilaridades
 se estudiaron por separado en la temporada de cría (monk_85.dis) y fuera de ésta (monk_84.dis).
 
+En la tercera parte, el análisis de componentes principales se lleva a cabo calculando los valores propios y los
+vectores propios de la matriz de correlaciones. Con n casos y p variables, si escribimos X para la matriz
+n×p estandarizada para que las columnas tengan media cero y desviación estándar unitaria, encontramos
+los valores propios y los vectores propios de la matriz p × p X'X (que es n o n − 1 veces la matriz de
+correlaciones dependiendo de qué denominador se haya utilizado al calcular las desviaciones estándar).
+Con los datos de los gorriones del ejercicio 3 de los ejercicios propuestos para PCA.
