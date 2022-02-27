@@ -1,0 +1,489 @@
+---
+title: "Analisis multivariante 1"
+author: "Cristopher Valenzuela"
+date: "27 de febrero de 2022"
+output:
+  word_document: default
+  html_document: default
+always_allow_html: yes
+---
+
+
+En este ejercicio vamos a estudiar la tasa de enfermedades transmitidas por los alimentos causadas por
+el consumo de hortalizas y frutas en la Unión Europea y Estados Unidos con los datos del trabajo de
+Callejón et al.[1] (2015).
+
+Las enfermedades del análisis fueron Norovirus, Salmonella spp, Escherichia coli, Campylobacter spp,
+Shigella spp, Clostridium spp, Staphylococcus spp, Yersinia spp, Bacillus spp, otros virus y otros microorganismos.
+Las verduras eran Ensalada (todos los productos relacionados con la ensalada), Hojas (todos
+los productos relacionados con las hojas), Tomate y Otras verduras. Las frutas fueron Germinados (todos
+los productos relacionados con los germinados), Bayas, Melón, Zumos y Otras frutas.
+Los datos se encuentran en el archivo vegetables.zip. Aunque se pueden cargar desde el archivo
+vegetables.mat de Matlab, se recomienda leerlos desde los otros archivos. El archivo vegetables.dat
+contiene tres columnas de datos. La primera columna es la variable illness (enfermedad), la segunda es
+la variable veg.fruit (verduras/frutas). Y, por último, la tercera columna es la variable region (región).
+Los nombres de todos los elementos que necesitamos se hallan en el archivo vegetables_labels.txt de
+forma ordenada según la codificación.
+
+(a) Obtener las tablas de contingencia entre enfermedades y verduras/frutas separadas por región.
+brevemente.
+
+```{r }
+
+#cargamos los datos
+
+vegetables <- read.table("vegetables.dat")
+noms <- read.table("vegetables_labels.txt")
+
+#eliminamos los datos en blanco
+rm.blanks <- function(x) gsub(" ","",x)
+noms <- apply(noms,1,rm.blanks)
+
+colnames(vegetables) <- c("illness","veg.fruit","region")
+vegetables$illness <- factor(vegetables$illnes, labels=noms[1:11])
+vegetables$veg.fruit <- factor(vegetables$veg.fruit, labels=noms[12:20])
+vegetables$region <- factor(vegetables$region, labels=noms[21:22])
+
+#hacemos tablas de contingencia para cada region.
+
+attach(vegetables)
+tabla.EU <- table(illness[region=="EU"],veg.fruit[region=="EU"])
+tabla.EU
+
+
+```
+
+Tabla de contingencia para USA
+
+```{r}
+
+tabla.USA <- table(illness[region=="USA"],veg.fruit[region=="USA"])
+tabla.USA
+
+```
+
+
+(b) Realizar un análisis de correspondencias1 de las tablas, representar los resultados y comentarlos
+brevemente.
+
+```{r}
+
+library(ca)
+ca.EU <- ca(tabla.EU)
+round(ca.EU$sv^2, 3) # valores propios
+
+```
+
+
+```{r}
+
+plot(ca.EU)
+
+```
+
+
+Tambien realizamos un plot asimetrico
+
+```{r}
+
+plot(ca.EU, map = "rowprincipal")
+
+```
+
+
+Del mismo modo se puede hacer el otro gráfico asimétrico:
+
+```{r}
+
+plot(ca.EU, map = "colprincipal")
+
+```
+
+
+Realizamos los mismo graficos para USA, pero antes eliminamos datos faltantes
+
+```{r}
+ca.USA <- ca(tabla.USA[-c(6,8),])
+round(ca.USA$sv^2, 3) # valores propios
+```
+
+
+```{r}
+plot(ca.USA)
+```
+
+
+Tambien hacemos graficos asimetricos
+
+```{r}
+plot(ca.USA, map = "rowprincipal")
+
+```
+
+
+```{r}
+plot(ca.USA, map = "colprincipal")
+```
+
+
+Para USA los dos primeros componentes explican el 87.2% de los datos, mientras que para la UE explican el 86.1%.
+
+El Norovirus se muestra como responsable de la mayoría de los brotes relacionados con productos agrícolas, seguido de la Salmonela. El Norovirus está relacionado principalmente con el consumo de ensalada en los Estados Unidos y de bayas en la Unión Europea. La Salmonella fue la principal causa de brotes de productos agrícolas en varios estados de Estados Unidos y fue el patógeno implicado en la mayoría de los brotes asociados al consumo de coles, tomates y melones. Como se refleja en los gráficos, el patrón de los brotes de productos frescos difería en Estados Unidos y en la Unión Europea según el tipo de microorganismo y el vehículo alimentario implicado.
+
+
+Corradino[2] utilizó el MDS para estudiar la estructura de proximidades en una colonia de monos japoneses.
+Las observaciones se realizaron en un grupo social de 14 monos japoneses durante un período de
+un año. Los catorce monos se nombran y describen en la Tabla 1.
+Se observaron las relaciones de proximidad cada 60 segundos. Si dos monos se encontraban a menos de
+1.5 metros de distancia y se toleraban, se decía que estaban “cerca”. Se calcularon las disimilaridades para
+cada par de monos en función del tiempo que la pareja estuvo cerca la una de la otra. Las disimilaridades
+se estudiaron por separado en la temporada de cría (monk_85.dis) y fuera de ésta (monk_84.dis).
+
+(a) Utilizar las disimilaridades del archivo monk_84.dis2 para definir un objeto del tipo dist en R o una
+matriz simétrica con esas disimilaridades. Observaremos el orden de la tabla 1 que se puede obtener
+del archivo monkeys.dat. El vector con las 91 disimilaridades debe rellenar la matriz triangular inferior del objeto por columnas. También habrá que poner nombres a las filas y columnas de la
+matriz.
+
+Lo mismo para el archivo monk_85.dis con las disimilaridades en la temporada de cría.
+
+
+El primer paso es crear la matriz de distancia para los datos
+
+```{r}
+
+monkeys <- read.csv("monkeys.dat", sep=";")
+monkeys$age <- factor(monkeys$age)
+monkeys$sex <- factor(monkeys$sex)
+df <- read.table("monk_84.dis", header = FALSE, sep="", skip=2)
+disim <- as.numeric(df$V1[1:91])
+mat <- matrix(0, ncol=14, nrow=14)
+mat[lower.tri(mat)] <- disim
+mat <- mat + t(mat)
+colnames(mat) <- rownames(mat) <- monkeys$alias
+d.84 <- as.dist(mat)
+d.84
+
+```
+
+Realizamos la matriz de distancias para la otra temporada.
+
+```{r}
+df <- read.table("monk_85.dis", header = FALSE, sep="", skip=2)
+disim <- as.numeric(df$V1[1:91])
+mat <- matrix(0, ncol=14, nrow=14)
+mat[lower.tri(mat)] <- disim
+mat <- mat + t(mat)
+colnames(mat) <- rownames(mat) <- monkeys$alias
+d.85 <- as.dist(mat)
+d.85
+```
+
+
+(b) Comprobar que las disimilaridades en las dos temporadas forman conjuntos no euclídeos. ¿Qué
+significa esto?
+
+```{r}
+
+library(ade4)
+is.euclid(d.84,print=F)
+#como nos faltan datos chequeamos donde estan
+
+which(d.84==0)
+
+```
+
+Reemplazamos estos datos por un valor pequeño cercano al "0"
+
+```{r}
+d.84[which(d.84==0)] <- 0.0001
+which(d.85==0)
+```
+
+```{r}
+
+d.85[which(d.85==0)] <- 0.0001
+
+```
+
+Comprobamos si la distancia es euclidea
+
+```{r}
+
+is.euclid(d.84,print=F)
+
+```
+
+En este caso la distancia no es euclidea.
+
+```{r}
+
+is.euclid(d.85,print=F)
+
+```
+
+En este caso tampoco es euclidea.
+
+Cuando la disimilaridad es euclídea o una medida directa relativa a ella (tal como el coseno), la mejor elección para el MDS es el MDS métrico. Sin embargo, cuando la disimilaridad no es euclídea o incluso no métrica, debemos decidir entre la solución MDS métrica y la no métrica. El MDS no métrico frecuentemente demuestra ser más realista y mucho mejor en la práctica.
+
+(c) Realizar el MDS más apropiado (clásico, métrico o no métrico) con las disimilaridades de las dos
+temporadas por separado. ¿Cual es el stress en cada caso?
+
+```{r}
+
+set.seed(123)
+library(MASS)
+iso.mds.84 <- isoMDS(d.84)
+
+```
+
+```{r}
+iso.mds.84$stress
+```
+
+```{r}
+iso.mds.85 <- isoMDS(d.85)
+```
+
+```{r}
+iso.mds.85$stress
+```
+
+```{r}
+library(vegan)
+nmds.84 <- metaMDS(d.84, engine="monoMDS", autotransform=FALSE, trace = FALSE)
+nmds.84$stress*100
+```
+
+
+```{r}
+
+nmds.85 <- metaMDS(d.85, engine="monoMDS", autotransform=FALSE, trace = FALSE)
+nmds.85$stress*100
+
+```
+
+Aunque con valores elevados de stress, es evidente que la mejor solución se obtiene con la función metaMDS().
+
+(d) Dibujar la representación de puntos con las mejores soluciones del apartado anterior, una para cada
+temporada.
+
+```{r}
+plot(nmds.84$points[,1], nmds.84$points[,2], type = "n",
+xlab="NMDS1", ylab="NMDS2")
+title("Temporada sin cría")
+text(nmds.84$points[,1], nmds.84$points[,2],
+     col=ifelse(monkeys$sex=="male","blue","red"),
+     labels = rownames(nmds.84$points), cex=0.5)
+plot(nmds.84$points[,1], nmds.84$points[,2], type = "n",
+xlab="NMDS1", ylab="NMDS2")
+title("Temporada de cría")
+text(nmds.85$points[,1], nmds.85$points[,2],
+     col=ifelse(monkeys$sex=="male","blue","red"),
+     labels = rownames(nmds.85$points), cex=0.5)
+```
+
+Observamos una mayor proximidad en la representación de la temporada de cría. Los machos aparecen agrupados en las dos configuraciones, aunque con alguna excepción. Las hembras también forman un grupo, es decir, se relacionan más entre ellas en las dos temporadas.
+
+En el trabajo de Corradino se deducía que los machos estaban más cerca en la temporada de cría que fuera de ella. En nuestros gráficos este efecto no aparece.
+
+(e) Comparar las dos configuraciones de las temporadas con la función procrustes().
+
+¿Cual es el mono con menor residuo entre las dos configuraciones?
+
+```{r}
+
+proc <- procrustes(nmds.84,nmds.85)
+plot(proc)
+
+```
+
+
+El menor residuo de la representación es para Gilda.
+
+```{r}
+sort(residuals(proc))[1:3]
+```
+
+(f) Como el stress es alto, podemos optar por una representación en tres dimensiones.
+
+En primer lugar procedemos a calcular el MDS no métrico con 3 coordenadas.
+
+```{r}
+nmds.85.3 <- metaMDS(d.85, engine="monoMDS", k = 3, autotransform=FALSE, trace = FALSE)
+nmds.85.3$stress*100
+```
+
+El stress es más bajo que con dos dimensiones.
+
+```{r, warning = FALSE}
+library(plotly)
+datos <- data.frame(nmds.85.3$points)
+fig3D <- plot_ly(data=datos, x = ~MDS1, y = ~MDS2, z = ~MDS3, 
+                 color = ~monkeys$sex, colors = c("red","blue"))
+fig3D
+```
+
+
+Con la rotación adecuada se puede ver la separación total entre machos y hembras.
+
+Normalmente, el análisis de componentes principales se lleva a cabo calculando los valores propios y los
+vectores propios de la matriz de correlaciones. Con n casos y p variables, si escribimos X para la matriz
+n×p estandarizada para que las columnas tengan media cero y desviación estándar unitaria, encontramos
+los valores propios y los vectores propios de la matriz p × p X0X (que es n o n − 1 veces la matriz de
+correlaciones dependiendo de qué denominador se haya utilizado al calcular las desviaciones estándar).
+Con los datos de los gorriones del ejercicio 3 de los ejercicios propuestos para PCA, comprobar las
+siguientes afirmaciones:
+
+(a) El primer vector propio da las cargas (loadings) de cada variable en la primera componente principal,
+el segundo vector propio da las cargas en la segunda componente y así sucesivamente. Comprobar
+este resultado con la función princomp().
+
+```{r}
+load("gorriones.RData")
+X <- gorriones[,1:5]
+X <- scale(X)
+eig <- eigen(crossprod(X), symmetric = TRUE)
+pca <- princomp(X)
+pca$loadings
+```
+
+
+```{r}
+
+  eig$vectors
+
+```
+
+(b) Escribiendo las cargas de las primeras q componentes como columnas de la matriz p×q B, la matriz
+n × q P de las puntuaciones (scores) de las componentes principales de los individuos se obtiene
+aplicando las cargas a la matriz de datos original, es decir, P = XB.
+
+```{r}
+scores <- X %*% eig$vectors
+head(scores)
+```
+
+```{r}
+head(pca$scores)
+```
+
+(c) La matriz de suma de cuadrados y productos, P'P = D, es diagonal con elementos iguales a los
+primeros q valores propios de de la matriz X0X, de modo que las varianzas de las componentes
+principales pueden obtenerse dividiendo los valores propios por n o n − 1.
+
+```{r}
+D <- crossprod(scores)
+eig$values
+```
+
+```{r}
+diag(D)
+```
+
+```{r}
+diag(D)/49
+```
+
+```{r}
+pca$sdev^2
+```
+
+(d) Sustituimos los valores desconocidos (missings) de la matriz X (la de los
+controles) por la media de cada columna.
+El siguiente es estandarizar los datos para que tengan media cero y desviación estándar uno y
+finalmente calcular la matriz XX'.
+
+```{r, warning = FALSE}
+load("SNP.RData")
+controls <- rownames(subject.support)[subject.support$cc==0]
+pop <- subject.support[controls,"stratum"]
+pop.all <- subject.support[,"stratum"]
+use <- seq(1, ncol(snps.10), 10)
+ctl10 <- snps.10[controls, use]
+all10 <- snps.10[,use]
+X <- as(ctl10, "numeric")
+X.all <- as(all10,"numeric")
+dim(X)
+```
+
+La primera dificultad es substituir los valores missing por la media.
+
+```{r}
+for(i in 1:ncol(X)){
+  X[is.na(X[,i]), i] <- mean(X[,i], na.rm = TRUE)
+}
+```
+
+Estandarizamos los datos
+
+```{r}
+X <- scale(X)
+```
+
+Calculamos la matriz XX'
+
+```{r}
+XXt <- tcrossprod(X)
+head(XXt[1:10,1:10])
+```
+
+(e) Calcular los valores y vectores propios de la matriz XX' y, a partir de ellos, la matriz U.
+Comparar gráficamente las puntuaciones de la primera componente para los controles según la
+población.
+
+Hacer el mismo gráfico con la segunda y tercera componentes. ¿Qué componente separa mejor las
+poblaciones?
+
+```{r}
+eig <- eigen(XXt, symmetric = TRUE)
+eig$values[1:5]
+```
+
+```{r}
+U <- eig$vectors
+```
+
+```{r}
+oldpar <- par(mfrow=c(1,3))
+boxplot(U[,1] ~ pop, ylab="PC1")
+boxplot(U[,2] ~ pop, ylab="PC2")
+boxplot(U[,3] ~ pop, ylab="PC3")
+```
+
+```{r}
+par(oldpar)
+```
+
+(f) Calcular las cargas B según se ha explicado antes.
+```{r}
+eig$values[eig$values<0] <- 0
+v <- 1/sqrt(eig$values)
+m <- crossprod(X, U)
+# B <- m %*% diag(v) # poco eficiente
+# B <- t(t(m) * v) # más eficiente
+B <- m * rep(v, rep(nrow(m), ncol(m))) # mejor
+B[1:10,1:10]
+```
+
+(g) Calcular las puntuaciones de las dos primeras componentes de todas las observaciones con las cargas
+de los controles.
+
+Se controlan los valores faltantes y se estandarizan los datos
+
+```{r}
+for(i in 1:ncol(X.all)){
+  X.all[is.na(X.all[,i]), i] <- mean(X.all[,i], na.rm = TRUE)
+}
+X.all <- scale(X.all)
+```
+
+Calculamos las puntuaciones y hacemos el grafico
+
+```{r}
+
+scores.all.12 <- X.all %*% B[,1:2]
+plot(scores.all.12, xlab="PC1", ylab="PC2",
+     col=ifelse(pop.all=="CEU","red","blue"))
+```
+
+Las dos poblaciones quedan también separadas por la primera componente.
