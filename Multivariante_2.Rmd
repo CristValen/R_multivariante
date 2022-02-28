@@ -1,0 +1,368 @@
+---
+title: "Analisis 2"
+author: "Cristopher Valenzuela"
+date: "28 de febrero de 2022"
+output:
+  html_document: default
+  word_document: default
+---
+
+Un estudio contiene dos medidas de los anillos de crecimiento en las escamas de salmones de Alaska y de Canadá. Los datos se pueden obtener del archivo salmon.txt. Guardar este archivo en R como un data.frame de
+nombre salmon con la función read.table. Estos datos también se pueden hallar en el dataframe salmon del paquete rrcov.
+
+(a) Realizar una estadística descriptiva univariante y multivariante según el factor SalmonOrigin. 
+
+```{r ,warning = FALSE, message = FALSE}
+
+
+salmon <- read.table("salmon.txt", header=TRUE, stringsAsFactors = TRUE)
+str(salmon)
+
+```
+
+
+```{r}
+attach(salmon)
+summary(salmon)
+```
+
+```{r}
+salmon.num <- salmon[, 1:2]
+sapply(salmon.num, function(x) tapply(x, SalmonOrigin, mean))
+```
+
+```{r}
+sapply(salmon.num, function(x) tapply(x, SalmonOrigin, sd))
+```
+
+```{r}
+var(salmon.num)
+```
+
+
+```{r}
+cor(salmon.num)
+```
+
+```{r}
+oldpar <- par(mfrow=c(1,2))
+boxplot(Freshwater ~ SalmonOrigin)
+boxplot(Marine ~ SalmonOrigin)
+```
+
+
+Se realizan graficos de dispersion
+
+```{r}
+par(oldpar)
+
+library(ggplot2)
+plot(salmon.num, col=ifelse(SalmonOrigin=="Alaska", "red", "blue"), pch=20)
+legend("topright", levels(SalmonOrigin), col=c("red","blue"), pch=20)
+
+```
+
+```{r}
+ggplot(salmon, aes(x=Freshwater, y=Marine, color=SalmonOrigin)) +
+  geom_point()
+```
+
+```{r,warning = FALSE, message = FALSE}
+library(psych)
+pairs.panels(salmon.num,
+             gap = 0,
+             bg = c("red", "blue")[SalmonOrigin],
+             pch = 21)
+```
+
+(b) Realizar un análisis discriminante lineal
+
+```{r}
+
+library(MASS)
+fit.cv <- lda(SalmonOrigin ~ Freshwater + Marine, data=salmon, CV=TRUE)
+# Assess the accuracy of the prediction
+# percent correct for each category of G
+ct <- table(salmon$SalmonOrigin, fit.cv$class)
+diag(prop.table(ct, 1))
+
+```
+
+```{r}
+# total percent correct
+sum(diag(prop.table(ct)))
+```
+
+
+```{r, warning = FALSE, message = FALSE}
+library(klaR)
+partimat(SalmonOrigin ~ Marine + Freshwater, data=salmon, method="lda") 
+```
+
+Los histogramas para los valores de la primera función discriminante son:
+
+```{r}
+
+linear <- lda(SalmonOrigin ~ ., salmon)
+p <- predict(linear)
+ldahist(data = p$x[,1], g = SalmonOrigin)
+
+```
+
+
+Clasificamos una nueva observacion
+
+```{r}
+fit <- lda(SalmonOrigin ~ Freshwater + Marine, data=salmon)
+predict(fit, data.frame(Freshwater=120,Marine=380))$class
+```
+
+(c) Estudiar la normalidad multivariante de las dos poblaciones con el test de Mardia que se basa en
+la asimetría y la kurtosis multivariante.
+
+```{r}
+library(MVN)
+mvn(salmon,"SalmonOrigin", mvnTest = "mardia",
+                                     univariateTest = "SW",
+                                     univariatePlot = "qq", 
+                                     multivariatePlot = "qq")
+```
+
+(d) Con el mismo fin que en el apartado anterior se puede utilizar la función mardia() del paquete
+psych, sin embargo los resultados son distintos ya que esta función utiliza la matriz de covarianzas
+insesgada. Comprobar que la función mvn() también se puede ajustar para que los cálculos coincidan
+con los de la función mardia().
+
+```{r}
+mardia(salmon[SalmonOrigin=="Canada",-3])
+```
+
+Comprobamos que con la función mvn() y la matriz de covarianzas insesgada se obtiene el mismo resultado.
+
+```{r}
+mvn(salmon,"SalmonOrigin", mvnTest = "mardia",
+                             covariance = FALSE)$multivariateNormality
+```
+
+
+(e) Comparar las matrices de covarianzas de las dos poblaciones con el test de la razón de verosimilitudes.
+
+Para comparar las matrices de covarianzas de los 2 grupos utilizaremos el test de la razón de verosimilitudes.
+
+En primer lugar calculamos el número de casos para cada nivel:
+
+```{r}
+table(SalmonOrigin)
+```
+
+Se trata de un experimento balanceado con 50 réplicas por nivel.
+
+Para utilizar el test de la razón de verosimilitudes es preciso utilizar las estimaciones máximo-verosímiles de las matrices de covarianzas:
+
+```{r}
+(S1 <- cov(salmon[SalmonOrigin=="Alaska", 1:2]))
+```
+
+```{r}
+(S2 <- cov(salmon[SalmonOrigin=="Canada", 1:2]))
+```
+
+```{r}
+S1 <- 49*S1/50; S2 <- 49*S2/50
+S1
+```
+
+Observamos que unas pocas observaciones hacen que el signo de la covarianza sea distinto en las dos poblaciones.
+
+Así, la matriz de covarianzas común es
+
+```{r}
+S <- (50*S1 + 50*S2)/100
+S
+```
+
+y el estadístico (este estadístico puede ser sesgado y convendría aplicar la corrección de Box)
+
+```{r}
+llr <- 100*log(det(S)) - (50*log(det(S1)) + 50*log(det(S2)))
+```
+
+cuyo p-valor es
+
+```{r}
+s <- 2 # número de niveles
+p <- 2 # número de variables
+pchisq(llr, df= (s-1)*p*(p+1)/2, lower.tail=FALSE)
+```
+
+
+de modo que hay motivo para rechazar la igualdad de las matrices de covarianzas.
+
+El mismo resultado se obtiene con el test M de Box.
+
+```{r}
+library(biotools)
+boxM(salmon.num, SalmonOrigin)
+```
+
+(f) Como los dos tests del apartado anterior son muy sensibles a la no normalidad de los datos y
+tienden a rechazar la igualdad de covarianzas, realizar el test multivariante de Levene.
+
+En primer lugar estandarizamos las variables con la función scale() y calculamos el vector de medianas para cada grupo.
+
+```{r}
+matestandar <- scale(salmon.num)
+mat.Alaska <- matestandar[SalmonOrigin == "Alaska",]
+mat.Canada <- matestandar[SalmonOrigin == "Canada",]
+medianas.Alaska <- apply(mat.Alaska, 2, median)
+medianas.Canada <- apply(mat.Canada, 2, median)
+
+```
+
+Ahora preparamos los datos restando las medianas y calculando los valores absolutos.
+
+```{r}
+matabsdev.Alaska <- abs(sweep(mat.Alaska,2,medianas.Alaska,"-"))
+matabsdev.Canada <- abs(sweep(mat.Canada,2,medianas.Canada,"-"))
+matabsdev.all <- rbind(matabsdev.Alaska,matabsdev.Canada)
+matabsdev.all <- data.frame(SalmonOrigin, matabsdev.all)
+```
+
+Finalmente realizamos el test T2 de Hotelling para comparar las dos poblaciones.
+
+```{r}
+library(Hotelling)
+fit <- hotelling.test(matabsdev.Alaska,matabsdev.Canada)
+fit
+```
+
+Con este test, menos sensible que los dos anteriores, aceptamos la igualdad de las variabilidades de las dos problaciones.
+
+(g) Comparar la variabilidad de los dos grupos con la generalización multivariante del test de Levene
+llamada test de Van Valen.
+
+Compararemos la variabilidad de los dos grupos con una generalización multivariante del test de Levene llamada test de Van Valen.
+
+Para ello seguiremos el algoritmo paso a paso. En el apartado anterior ya estandarizamos las variables y hemos calculado el vector de medianas para cada grupo.
+
+```{r}
+matabsdev.all <- rbind(matabsdev.Alaska,matabsdev.Canada)
+matabsdev.all <- data.frame(SalmonOrigin, matabsdev.all)
+
+#calculamos distancias euclideas
+
+norma.euclidea <- function(x) sqrt(sum(x^2))
+distancias <- data.frame(SalmonOrigin, dist=apply(matabsdev.all[,-1],1,norma.euclidea))
+
+# finalmente hacemos el test de comparación de los dos grupos.
+
+dist_1 <- distancias$dist[SalmonOrigin=="Alaska"]
+dist_2 <- distancias$dist[SalmonOrigin=="Canada"]
+t.test(dist_1, dist_2, var.equal=T, data=distancias)
+```
+
+También con este test aceptamos la igualdad de variabilidades de las dos poblaciones.
+
+También se puede utilizar un test no paramétrico en lugar del test t de Student.
+
+```{r}
+wilcox.test(dist_1,dist_2, data=distancias)
+```
+También se puede utilizar la función que he programado para el caso de más de dos poblaciones:
+
+(h) En el caso de poblaciones normales con diferentes matrices de covarianzas se clasificará cada observación
+en el grupo con máxima probabilidad a posteriori, pero entonces las funciones discriminantes
+no son lineales, ya que tienen un término de segundo grado.
+```{r}
+salmon.qda <- qda(SalmonOrigin ~ ., data=salmon)
+clq <- predict(salmon.qda, salmon[,-1])$class
+table(SalmonOrigin, clq)
+
+```
+
+(i) Calcular el número de parámetros que hay que estimar en la discriminación lineal y en la cuadrática.
+
+```{r}
+2*2+2*(2+1)/2
+
+```
+
+Se obtuvieron que necesitamos calcular 7 parametros.Ahora, calculamos el numero de parametros para la discriminacion cuadratica.
+```{r}
+2*(2+2*(2+1)/2)
+```
+
+(j) Calcular los errores de clasificación con ambas reglas utilizando validación cruzada.
+
+Para calcular la tasa de error por validación cruzada se utiliza la opción CV = TRUE en las funciones de R.
+```{r}
+1 - sum(fit.cv$class == SalmonOrigin)/100
+```
+
+```{r}
+salmon.qda.cv <- qda(SalmonOrigin ~ ., data=salmon, CV=TRUE)
+1 - sum(salmon.qda.cv$class == SalmonOrigin)/100
+```
+
+Dado que el discriminador lineal con 2 variables consigue clasificar bien casi todos los datos, lo más aconsejable en este caso es desestimar las opciones más complejas. Cuantos menos parámetros haya que estimar, más robusto resulta el discriminador y más fácil su interpretación.
+
+Vamos a utilizar unos datos del Old Faithful, uno de los géiseres más conocidos del Parque nacional de Yellowstone, en el estado de Wyoming de los Estados Unidos. Para obtener este conjunto de datos en R simplemente hay que
+ejecutar la instrucción faithful. También hay un archivo de ayuda que se ve con la instrucción ?faithful.
+
+(a) Como un estudio preliminar, realizar un análisis de conglomerados jerárquico con las distancias
+euclídeas y el método de Ward.
+
+```{r}
+data(faithful)
+str(faithful)
+```
+
+```{r}
+hc <- hclust(dist(faithful), method = "ward.D2")
+plot(hc, labels=F, hang=-1)
+```
+
+El dendograma sugiere 2 conclomerados. 
+
+(b) Cuando se procede a un análisis k-means, estamos interesados en saber hasta qué punto los conglomerados
+se empaquetan estrechamente, eso nos puede ayudar a determinar el valor apropiado de k. Vamos a utilizar la suma de cuadrados dentro del grupo (within group sum of squares).
+
+```{r}
+WSS <- rep(0,10)
+n <- nrow(faithful)
+WSS[1] <- (n-1)*sum(apply(faithful,2,var))
+
+#Se trata de calcular la varianza para las dos columnas o variables del data.frame faithful, sumarlas y multiplicar por el número de observaciones menos 1.
+
+set.seed(123)
+for (k in 2:10) WSS[k] <- kmeans(faithful, k)$tot.withinss
+
+#El gráfico de WSS como función de k es:
+plot(1:10,WSS, xlab="Número de conglomerados", ylab="WSS", type="l")
+```
+
+Dos parece ser suficiente, como maximo 5.
+
+(c) Realizar un particionado alrededor de los k-medoides.
+
+```{r}
+library(cluster)
+si.avg <- rep(0,6)
+for (k in 2:7) {
+pr <- pam(faithful, k)
+si.avg[k-1] <- summary(silhouette(pr))$avg.width
+}
+si.avg
+```
+
+En este caso el mejor número de conglomerados es 2.
+
+```{r}
+pam2 <- pam(faithful, 2)
+si <- silhouette(pam2)
+# plot(si, col = c("red", "green"))
+clusplot(pam2)
+
+```
+
+
