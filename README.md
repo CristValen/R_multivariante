@@ -25,3 +25,9 @@ n×p estandarizada para que las columnas tengan media cero y desviación estánd
 los valores propios y los vectores propios de la matriz p × p X'X (que es n o n − 1 veces la matriz de
 correlaciones dependiendo de qué denominador se haya utilizado al calcular las desviaciones estándar).
 Con los datos de los gorriones del ejercicio 3 de los ejercicios propuestos para PCA.
+
+Segundo análisis que consiste en un estudio contiene dos medidas de los anillos de crecimiento en las escamas de salmones de Alaska y de Canadá. Los datos se pueden obtener del archivo salmon.txt. Guardar este archivo en R como un data.frame de nombre salmon con la función read.table. Estos datos también se pueden hallar en el data.frame salmon del paquete rrcov.
+
+En segundo lugar, Vamos a utilizar unos datos del Old Faithful, uno de los géiseres más conocidos del Parque nacional de Yellowstone, en el estado de Wyoming de los Estados Unidos.
+
+Para obtener este conjunto de datos en R simplemente hay que ejecutar la instrucción faithful. También hay un archivo de ayuda que se ve con la instrucción ?faithful.
